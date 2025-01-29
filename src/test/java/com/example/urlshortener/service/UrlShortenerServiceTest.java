@@ -47,7 +47,7 @@ class UrlShortenerServiceTest {
 
         when(repository.findByShortId(shortId)).thenReturn(Optional.of(shortUrl));
 
-        Optional<ShortUrl> result = service.getShortUrl(shortId);
+        Optional<ShortUrl> result = Optional.ofNullable(service.getShortUrl(shortId));
 
         assertTrue(result.isPresent());
         assertEquals(shortUrl.getOriginalUrl(), result.get().getOriginalUrl());

@@ -1,0 +1,47 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodları çek
+        uses: actions/checkout@v3
+
+      - name: Java ortamını ayarla
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Bağımlılıkları indir ve projeyi derle
+        run: mvn clean package
+
+      - name: Docker build ve push
+        run: |
+          docker build -t your-dockerhub-username/urlshortener:latest .
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          docker push your-dockerhub-username/urlshortener:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: SSH ile sunucuya bağlan ve konteyneri güncelle
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            docker pull your-dockerhub-username/urlshortener:latest
+            docker stop urlshortener_app || true
+            docker rm urlshortener_app || true
+            docker run -d --name urlshortener_app -p 8080:8080 your-dockerhub-username/urlshortener:latest
